@@ -66,22 +66,24 @@ def call_agent(agent: Agent, message_text: str) -> str:
 ##########################################
 # --- Agente 1: Buscador de receitas --- #
 ##########################################
-def agente_buscador(topico,data_de_hoje):
+def agente_buscador(receita,data_de_hoje):
   buscador=Agent(
       name='agente_buscador', model='gemini-2.0-flash', description='Agente de buscar noticias no google',
       tools=[google_search],
-      instruction='''Você é um assistente de pesquisa culinária. Sua tarefa é usar a ferramenta de busca do google (google_search)
+      instruction='''Você é um assistente pessoal de pesquisa culinária. Sua tarefa é usar a ferramenta de busca do google (google_search)
       para recuperar as receitas mais bem avaliadas de acordo com o que o usuario pedir e colocalas na forma de receita com modo de preparo. Se for um pedido direto irá retornar até 3 receitas de fontes diferentes.Se for mais genérico como por exemplo um prato de massa ou um doce, buscar 5 receitas diferentes.
-      Já se for pedido uma refeição completa como por exemplo um almoço de familia ou um jantar romantico, retornar apenas um prato de entrada, um principal e uma sobremesa.Apenas se vier Balacubaco você irá procurar uma receita baseado no dia e ano da busca, se não tiver Balacubaco não mensionar a data.'''
+      Já se for pedido uma refeição completa como por exemplo um almoço de familia ou um jantar romantico, retornar apenas um prato de entrada, um principal e uma sobremesa.
+      Apenas se vier Balacubaco você irá procurar até 3 receita baseado no dia e ano da busca e aprersentar ao usuário, não perguntar as preferencias dele. Se não tiver Balacubaco não mensionar a data.
+      '''
   )
-  entrada_do_agente_buscador = f'Tópico: {topico}\nData de hoje: {data_de_hoje}'
+  entrada_do_agente_buscador = f'Receita: {receita}\nData de hoje: {data_de_hoje}'
   lancamentos= call_agent(buscador, entrada_do_agente_buscador)
   return lancamentos
 
 ################################################
 # --- Agente 2: Determinar preços --- #
 ################################################
-def agente_preco(topico, lancamentos):
+def agente_preco(receita, lancamentos):
     precificador = Agent(
         name="agente_preco",
         model="gemini-2.0-flash",
@@ -92,7 +94,7 @@ def agente_preco(topico, lancamentos):
         tools=[google_search]
     )
 
-    entrada_do_agente_precificador = f"Tópico:{topico}\nLançamentos: {lancamentos}"
+    entrada_do_agente_precificador = f"receita:{receita}\nLançamentos: {lancamentos}"
     # Executa o agente
     precos = call_agent(precificador, entrada_do_agente_precificador)
     return precos
@@ -100,7 +102,7 @@ def agente_preco(topico, lancamentos):
 ######################################
 # --- Agente 3: Nutrição --- #
 ######################################
-def agente_nutricional(topico, lancamentos):
+def agente_nutricional(receita, lancamentos):
     nutricionista = Agent(
         name="agente_nutricionista",
         model="gemini-2.0-flash",
@@ -113,7 +115,7 @@ def agente_nutricional(topico, lancamentos):
             """,
 
     )
-    entrada_do_agente_nutricional = f"Tópico: {topico}\nLançamentos: {precos}"
+    entrada_do_agente_nutricional = f"Receita: {receita}\nLançamentos: {precos}"
     # Executa o agente
     nutricao = call_agent(nutricionista, entrada_do_agente_nutricional)
     return nutricao
@@ -122,10 +124,10 @@ def agente_nutricional(topico, lancamentos):
 # --- Agente 4: Escritor da receita --- #
 ##########################################
 def agente_receita(lancamentos, precos, nutricao):
-    revisor = Agent(
-        name="agente_revisor",
+    escritor = Agent(
+        name="agente_escritor",
         model="gemini-2.0-flash",
-        description="Agente revisor de post para redes sociais.",
+        description="Agente escritor do cardápio.",
         instruction="""
             Você é um escritor de receitas, especializado em comunicação. Você vai pegar todas as receitas encontradas pelo lancamentos e relacionar com os preços encontrados pelo precos produzindo uma receita
             que mostra os preços dos ingredientes
@@ -134,37 +136,37 @@ def agente_receita(lancamentos, precos, nutricao):
     )
     entrada_do_agente_receita = f"Receitas: {lancamentos}\nPreço: {precos}\nNutrição:{nutricao}"
     # Executa o agente
-    receita = call_agent(revisor, entrada_do_agente_receita)
-    return receita
+    cardapio = call_agent(escritor, entrada_do_agente_receita)
+    return cardapio
 
 data_de_hoje = date.today().strftime("%d/%m/%Y")
 
 print("🔪 CozinhAI, seu chef de cozinha pessoal 🥣")
 
-# --- Obter o Tópico do Usuário ---
-topico = input("🔥 O que iremos preparar hoje?: ")
+# --- Obter o Receita do Usuário ---
+receita = input("🔥 O que iremos preparar hoje?: ")
 
 # Inserir lógica do sistema de agentes ###############################################
 
-if not topico:
+if not receita:
   print('Então vou te surpriender hoje!')
-  topico = ('Balacubaco')
-  lancamentos= agente_buscador(topico,data_de_hoje)
+  receita = ('Balacubaco')
+  lancamentos= agente_buscador(receita,data_de_hoje)
   print('Encontrada as melhores receitas!📃')
-  precos = agente_preco(topico, lancamentos)
+  precos = agente_preco(receita, lancamentos)
   print('Os melhores preços estão aqui!🍳')
-  nutricao = agente_nutricional(topico, lancamentos)
+  nutricao = agente_nutricional(receita, lancamentos)
   print('Uma refeição balenciada é muito importante!💪')
-  receita= agente_receita(lancamentos, precos, nutricao)
-  print(receita)
+  cardapio= agente_receita(lancamentos, precos, nutricao)
+  print(cardapio)
 else:
   print(f'Ok! Vamos buscar algumas sugestões para os pratos.')
 
-  lancamentos= agente_buscador(topico,data_de_hoje)
+  lancamentos= agente_buscador(receita,data_de_hoje)
   print('Encontrada as melhores receitas!📃')
-  precos = agente_preco(topico, lancamentos)
+  precos = agente_preco(receita, lancamentos)
   print('Os melhores preços estão aqui!🍳')
-  nutricao = agente_nutricional(topico, lancamentos)
+  nutricao = agente_nutricional(receita, lancamentos)
   print('Uma refeição balenciada é muito importante!💪')
-  receita= agente_receita(lancamentos, precos, nutricao)
-  print(receita)
+  cardapio= agente_receita(lancamentos, precos, nutricao)
+  print(cardapio)
